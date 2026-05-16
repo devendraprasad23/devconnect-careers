@@ -1,7 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import Navbar from "../../components/layout/Navbar";
+
 import api from "../../api/axios";
 import toast from "react-hot-toast";
+import { useAuthStore } from "../../store/auth.store";
+
+// Generate formatted candidate ID from UUID
+const formatCandidateId = (uuid: string): string => {
+  if (!uuid) return "DC-0000";
+  const short = uuid.replace(/-/g, "").slice(0, 6).toUpperCase();
+  return `DC-2026-${short}`;
+};
 
 interface Certification {
   name: string;
@@ -29,6 +37,10 @@ interface ProfileForm {
 }
 
 export default function CandidateProfilePage() {
+  const { user } = useAuthStore();
+  const userId = user?.userId || "";
+  const candidateId = formatCandidateId(userId);
+
   const [form, setForm] = useState<ProfileForm>({
     fullName: "",
     bio: "",
@@ -160,7 +172,7 @@ export default function CandidateProfilePage() {
   if (loading)
     return (
       <>
-        <Navbar />
+        
         <div
           style={{
             minHeight: "100vh",
@@ -179,7 +191,7 @@ export default function CandidateProfilePage() {
 
   return (
     <>
-      <Navbar />
+      
       <div className="profile-page">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -276,9 +288,57 @@ export default function CandidateProfilePage() {
             <div className="profile-header-info">
               <h1>{form.fullName || "Your Profile"}</h1>
               <p>Complete your profile to boost your AI Match Score</p>
-              <div className="profile-score">
-                🎯 {form.skills.length} skills · {form.experienceYears} yrs exp
-                · {form.certifications.length} certs
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.5rem",
+                  flexWrap: "wrap",
+                  marginTop: "0.5rem",
+                }}
+              >
+                <div className="profile-score">
+                  🎯 {form.skills.length} skills · {form.experienceYears} yrs ·{" "}
+                  {form.certifications.length} certs
+                </div>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    background: "rgba(34,197,94,0.08)",
+                    border: "1px solid rgba(34,197,94,0.2)",
+                    borderRadius: "20px",
+                    padding: "0.3rem 0.75rem",
+                    fontSize: "0.72rem",
+                    color: "#22c55e",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(userId);
+                    toast.success("User ID copied!");
+                  }}
+                  title="Click to copy full UUID"
+                >
+                  🪪 {candidateId}
+                </div>
+              </div>
+              <div
+                style={{
+                  marginTop: "0.4rem",
+                  fontSize: "0.68rem",
+                  color: "#334155",
+                  fontFamily: "monospace",
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  navigator.clipboard.writeText(userId);
+                  toast.success("UUID copied!");
+                }}
+                title="Click to copy full UUID"
+              >
+                UUID:{" "}
+                {userId ? `${userId.slice(0, 8)}...${userId.slice(-4)}` : "—"}
               </div>
             </div>
           </div>

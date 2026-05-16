@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../../components/layout/Navbar";
+
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 
@@ -161,7 +161,7 @@ export default function PostJobPage() {
 
   return (
     <>
-      <Navbar />
+      
       <div className="post-job-page">
         <style>{`
           .post-job-page {
