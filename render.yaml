@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: devconnect-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    branch: main
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
