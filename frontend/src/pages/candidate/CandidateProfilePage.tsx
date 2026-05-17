@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-
+import Navbar from "../../components/layout/Navbar";
 import api from "../../api/axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../../store/auth.store";
@@ -90,7 +90,7 @@ export default function CandidateProfilePage() {
           degree: d.degree || "",
           graduationYear: d.graduationYear || "",
           noticePeriod: d.noticePeriod || "",
-          certifications: d.certifications || [],
+          certifications: d.certifications ? JSON.parse(d.certifications) : [],
           resumeUrl: d.resumeUrl || "",
           profilePicture: d.profilePicture || "",
         });
@@ -160,7 +160,10 @@ export default function CandidateProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put("/users/profile", form);
+      await api.put("/users/profile", {
+        ...form,
+        certifications: JSON.stringify(form.certifications),
+      });
       toast.success("Profile saved!");
     } catch {
       toast.error("Failed to save profile");
@@ -172,7 +175,7 @@ export default function CandidateProfilePage() {
   if (loading)
     return (
       <>
-        
+        <Navbar />
         <div
           style={{
             minHeight: "100vh",
@@ -191,7 +194,7 @@ export default function CandidateProfilePage() {
 
   return (
     <>
-      
+      <Navbar />
       <div className="profile-page">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
