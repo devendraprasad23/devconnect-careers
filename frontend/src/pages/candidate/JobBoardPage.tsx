@@ -34,6 +34,8 @@ const PAGE_SIZE = 9;
 export default function JobBoardPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const isRecruiter = user?.role === "RECRUITER";
+
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function JobBoardPage() {
 
   useEffect(() => {
     loadJobs();
-    if (user) loadMyApplications();
+    if (user && !isRecruiter) loadMyApplications();
   }, []);
 
   const loadJobs = async () => {
@@ -94,11 +96,21 @@ export default function JobBoardPage() {
 
   const handleApply = async () => {
     if (!applyModal) return;
+    // Resume is required
+    if (!resumeBase64) {
+      toast.error("Please upload your resume before submitting");
+      return;
+    }
+    // Cover letter is required
+    if (!coverLetter.trim()) {
+      toast.error("Please write a cover letter");
+      return;
+    }
     setApplying(true);
     try {
       await api.post(`/applications/jobs/${applyModal.id}`, {
         coverLetter,
-        resumeUrl: resumeBase64 || null,
+        resumeUrl: resumeBase64,
       });
       setAppliedJobIds((prev) => new Set([...prev, applyModal.id]));
       setApplyModal(null);
@@ -132,10 +144,8 @@ export default function JobBoardPage() {
 
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
-
   const salaryLabel = (v: number) => (v === 0 ? "Any" : `₹${v}L`);
 
-  // Reset pagination when filters change
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [search, typeFilter, locationFilter, maxSalary]);
@@ -158,10 +168,25 @@ export default function JobBoardPage() {
             marginBottom: 6,
           }}
         >
-          Find Your Next Role
+          {isRecruiter ? "Browse Job Listings" : "Find Your Next Role"}
         </h1>
         <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>
           {filtered.length} job{filtered.length !== 1 ? "s" : ""} available
+          {isRecruiter && (
+            <span
+              style={{
+                marginLeft: 8,
+                fontSize: 12,
+                color: "#f59e0b",
+                background: "rgba(245,158,11,0.1)",
+                padding: "2px 8px",
+                borderRadius: 20,
+                border: "1px solid rgba(245,158,11,0.2)",
+              }}
+            >
+              Recruiter View — Read Only
+            </span>
+          )}
         </p>
 
         {/* Search + location */}
@@ -463,12 +488,11 @@ export default function JobBoardPage() {
                             border: "1px solid rgba(251,191,36,0.2)",
                           }}
                         >
-                          {job.experienceMin}–{job.experienceMax} yrs
+                          {job.experienceMin}– yrs
                         </span>
                       )}
                     </div>
 
-                    {/* Skills */}
                     {job.skillsRequired?.length > 0 && (
                       <div
                         style={{ display: "flex", flexWrap: "wrap", gap: 6 }}
@@ -512,7 +536,9 @@ export default function JobBoardPage() {
                       >
                         {job.applicationsCount ?? 0} applicants
                       </span>
-                      {user && !applied && (
+
+                      {/* Apply button — hidden for recruiters */}
+                      {!isRecruiter && user && !applied && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -539,6 +565,8 @@ export default function JobBoardPage() {
                           Apply Now
                         </button>
                       )}
+
+                      {/* Login to apply — for guests */}
                       {!user && (
                         <button
                           onClick={(e) => {
@@ -559,13 +587,28 @@ export default function JobBoardPage() {
                           Login to Apply
                         </button>
                       )}
+
+                      {/* Recruiter view indicator */}
+                      {isRecruiter && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "#f59e0b",
+                            padding: "4px 10px",
+                            borderRadius: 20,
+                            background: "rgba(245,158,11,0.1)",
+                            border: "1px solid rgba(245,158,11,0.2)",
+                          }}
+                        >
+                          View Only
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Load More */}
             {hasMore && (
               <div style={{ textAlign: "center", marginTop: 40 }}>
                 <button
@@ -601,8 +644,8 @@ export default function JobBoardPage() {
         )}
       </div>
 
-      {/* Apply Modal */}
-      {applyModal && (
+      {/* Apply Modal — only for candidates */}
+      {applyModal && !isRecruiter && (
         <div
           style={{
             position: "fixed",
@@ -657,12 +700,12 @@ export default function JobBoardPage() {
                 fontWeight: 500,
               }}
             >
-              Cover Letter
+              Cover Letter <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <textarea
               value={coverLetter}
               onChange={(e) => setCoverLetter(e.target.value)}
-              placeholder="Why are you a great fit for this role? (optional)"
+              placeholder="Why are you a great fit for this role?"
               rows={5}
               style={{
                 width: "100%",
@@ -671,7 +714,7 @@ export default function JobBoardPage() {
                 padding: "12px 14px",
                 borderRadius: 10,
                 background: "#1e293b",
-                border: "1px solid var(--border-color)",
+                border: `1px solid ${!coverLetter.trim() && applying ? "#ef4444" : "var(--border-color)"}`,
                 color: "var(--text-primary)",
                 fontSize: 14,
                 outline: "none",
@@ -688,7 +731,7 @@ export default function JobBoardPage() {
                 fontWeight: 500,
               }}
             >
-              Resume (PDF, max 5MB)
+              Resume (PDF, max 5MB) <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -697,10 +740,12 @@ export default function JobBoardPage() {
                 marginBottom: 24,
                 padding: 18,
                 borderRadius: 10,
-                border: `2px dashed ${resumeFile ? "rgba(34,197,94,0.5)" : "var(--border-color)"}`,
+                border: `2px dashed ${resumeFile ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.4)"}`,
                 textAlign: "center",
                 cursor: "pointer",
-                background: resumeFile ? "rgba(34,197,94,0.05)" : "transparent",
+                background: resumeFile
+                  ? "rgba(34,197,94,0.05)"
+                  : "rgba(239,68,68,0.03)",
               }}
             >
               {resumeFile ? (
@@ -718,8 +763,10 @@ export default function JobBoardPage() {
               ) : (
                 <div>
                   <div style={{ fontSize: 28, marginBottom: 6 }}>📎</div>
-                  <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>
-                    Click to upload your resume
+                  <p
+                    style={{ color: "#ef4444", fontSize: 14, fontWeight: 500 }}
+                  >
+                    Resume required — click to upload
                   </p>
                   <p style={{ color: "var(--text-muted)", fontSize: 12 }}>
                     PDF only · max 5MB
