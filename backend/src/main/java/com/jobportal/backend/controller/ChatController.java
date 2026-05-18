@@ -10,7 +10,7 @@ import java.util.*;
 public class ChatController {
 
     private static final String GEMINI_API_KEY = "AIzaSyBwlpqHOY1HnyQSGlv1Au7bybKwK3vnIFg";
-    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
+    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY;
 
     @PostMapping
     public ResponseEntity<?> chat(@RequestBody Map<String, Object> request) {
@@ -22,24 +22,17 @@ public class ChatController {
             List<Map<String, Object>> messages = (List<Map<String, Object>>) request.get("messages");
             List<Map<String, Object>> contents = new ArrayList<>();
 
-            Map<String, Object> systemContent = new HashMap<>();
-            systemContent.put("role", "user");
-            systemContent.put("parts", List.of(Map.of("text", "You are DevBot, AI assistant for DevConnect Careers - a job portal for developers in India. Help with job search, career advice, resume tips. Be friendly and brief, max 150 words.")));
-            contents.add(systemContent);
-
-            Map<String, Object> ackContent = new HashMap<>();
-            ackContent.put("role", "model");
-            ackContent.put("parts", List.of(Map.of("text", "Got it! I am DevBot, ready to help.")));
-            contents.add(ackContent);
+            contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", "You are DevBot, AI assistant for DevConnect Careers. Help with job search and career advice. Be friendly and brief."))));
+            contents.add(Map.of("role", "model", "parts", List.of(Map.of("text", "Got it! I am DevBot, ready to help."))));
 
             if (messages != null) {
                 for (Map<String, Object> msg : messages) {
                     String role = (String) msg.get("role");
                     String content = (String) msg.get("content");
-                    Map<String, Object> geminiMsg = new HashMap<>();
-                    geminiMsg.put("role", "assistant".equals(role) ? "model" : "user");
-                    geminiMsg.put("parts", List.of(Map.of("text", content)));
-                    contents.add(geminiMsg);
+                    contents.add(Map.of(
+                            "role", "assistant".equals(role) ? "model" : "user",
+                            "parts", List.of(Map.of("text", content))
+                    ));
                 }
             }
 
@@ -52,13 +45,11 @@ public class ChatController {
             Map responseBody = response.getBody();
             List candidates = (List) responseBody.get("candidates");
             Map firstCandidate = (Map) candidates.get(0);
-            Map content = (Map) firstCandidate.get("content");
-            List parts = (List) content.get("parts");
-            Map firstPart = (Map) parts.get(0);
-            String text = (String) firstPart.get("text");
+            Map contentMap = (Map) firstCandidate.get("content");
+            List parts = (List) contentMap.get("parts");
+            String text = (String) ((Map) parts.get(0)).get("text");
 
             return ResponseEntity.ok(Map.of("content", List.of(Map.of("type", "text", "text", text))));
-
         } catch (Exception e) {
             System.err.println("Chat error: " + e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
